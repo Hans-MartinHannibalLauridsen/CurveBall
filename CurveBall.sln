@@ -1,6 +1,6 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ConsoleApp1", "ConsoleApp1\ConsoleApp1.csproj", "{ED4B2A06-C8E6-457B-B659-22DAEEEA145C}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CurveBall", "CurveBall\CurveBall.csproj", "{ED4B2A06-C8E6-457B-B659-22DAEEEA145C}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
