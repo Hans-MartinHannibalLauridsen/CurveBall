@@ -13,7 +13,7 @@ CurveBall.exe 'PathToCA.cer'
 ```
 The program will output a .p12 file contaning a certificate with the same public key and serial number as the original, including a key.
 
-To extract key and cert can be extracted from the .p12 by using openssl with the following commands
+The key and cert can be extracted from the .p12 by using openssl with the following commands
 ```
 openssl pkcs12 -in Rogue.p12 -nocerts -out CA.key
 ```
